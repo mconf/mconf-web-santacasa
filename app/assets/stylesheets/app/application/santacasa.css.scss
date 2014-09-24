@@ -39,6 +39,10 @@ ul#navbar-left-links, #navbar #navbar-right-links {
   background: image-url('santacasa/footer-copyright.png') no-repeat scroll left top transparent;
 }
 
+.simple-footer #footer-logo {
+  background: image-url('santacasa/footer-copyright-inverted.png') no-repeat scroll left top transparent;
+}
+
 #navbar-logo {
   margin-top: 5px;
   width: 68px;
@@ -88,7 +92,7 @@ h1, h2, h3, h4 {
 #footer {
   .footer-languages {
     float: left;
-    margin: 20px 0 0 30px;
+    margin: 20px 0 0 100px;
 
     li {
       display: inline;
@@ -111,4 +115,39 @@ h1, h2, h3, h4 {
       height: 32px;
     }
   }
+}
+
+#footer-wrapper.simple-footer #footer .languages {
+  float: left;
+  margin: 20px 0 0 100px;
+
+  li {
+    display: inline;
+    margin-left: 10px;
+  }
+}
+
+body.errors #content-wrapper {
+  background: #eee;
+}
+
+body.frontpage.show {
+
+  #navbar-wrapper {
+    background: $transparent;
+    @include box-shadow(none);
+  }
+
+  #navbar {
+    #main-logo-santacasa {
+      margin-left: 200px;
+      float: left;
+    }
+
+    #main-logo {
+      margin-right: 200px;
+      float: right;
+    }
+  }
+
 }

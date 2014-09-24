@@ -1,11 +1,12 @@
 #footer-wrapper.simple-footer
   #footer
-    .link-group
-      #footer-logo.link-group
-        = link_to current_site.name, "/", :class => 'title'
-        %span= t('.copyright', :site => current_site.name)
+    #footer-logo
+    -# .link-group
+    -#   #footer-logo.link-group
+    -#     = link_to current_site.name, "/", :class => 'title'
+    -#     %span= t('.copyright', :site => current_site.name)
     .link-group.languages
-      %h3= t('.translate.change')
+      -# %h3= t('.translate.change')
       %ul
         - available_locales.each do |locale|
           %li
@@ -13,3 +14,6 @@
             - text = t('locales.' + locale.to_s)
             - link = link_to(text, main_app.session_locale_path(:l => locale.to_s), :method => :post)
             = (flag + " " + link).html_safe
+    .mconftec
+      = link_to "http://mconf.com" do
+        = image_tag "santacasa/MconfTec-ico-64x64.png", size: "32x32", title: "Mconf Tecnologia"
