@@ -1,0 +1,114 @@
+@import "compass/css3";
+@import "compass/typography/links";
+@import "definitions";
+
+#site {
+  background: image-url('santacasa/bg-page.jpg') repeat-x scroll center top transparent;
+}
+
+#page-header-wrapper {
+  border: 0;
+  background: $transparent;
+}
+
+#navbar ul#navbar-left-links, #navbar ul#navbar-right-links {
+  @include font-size($font-medium);
+
+  .dropdown-menu {
+    @include font-size($font-normal);
+  }
+}
+
+ul#navbar-left-links, #navbar #navbar-right-links {
+  margin: 25px 20px;
+}
+
+#content, #content-middle, #navbar-wrapper {
+  background: $transparent;
+}
+
+#footer-wrapper {
+  background: image-url('santacasa/bg-footer.jpg') repeat scroll center top transparent;
+  //padding: 0;
+}
+
+#footer-logo {
+  margin-top: 10px;
+  width: 280px;
+  height: 46px;
+  background: image-url('santacasa/footer-copyright.png') no-repeat scroll left top transparent;
+}
+
+#navbar-logo {
+  margin-top: 5px;
+  width: 68px;
+  height: 80px;
+}
+
+#page-menu {
+
+  > ul {
+    border-bottom: 1px solid #ddd;
+
+    > li {
+      display: inline-block;
+      margin-left: 10px;
+      margin-bottom: -2px;
+
+      &.selected {
+        border: 0;
+        border-bottom: 3px solid $santacasa-dark-peach;
+        @include border-top-radius(0);
+        background: $transparent;
+        > a {
+          $normal: $h-font-color;
+          $hover: lighten($h-font-color, 10);
+          @include link-colors($normal, $hover, $hover, $normal);
+        }
+      }
+    }
+  }
+
+}
+
+#navbar #navbar-right-links .dropdown .dropdown-menu {
+  top: $navbar-height - 60px; // 60 magic number for borders, margins, etc, makes it look good
+}
+
+#content-middle {
+  h3 {
+    color: $h-font-color;
+  }
+}
+
+h1, h2, h3, h4 {
+  color: $h-font-color;
+}
+
+#footer {
+  .footer-languages {
+    float: left;
+    margin: 20px 0 0 30px;
+
+    li {
+      display: inline;
+      margin-left: 10px;
+
+      a {
+        $normal: #ddd;
+        $hover: $link-color-hover;
+        @include link-colors($normal, $hover, $hover, $normal);
+      }
+    }
+  }
+
+  .mconftec {
+    float: right;
+    margin: 20px 0 0 0;
+
+    img {
+      width: 32px;
+      height: 32px;
+    }
+  }
+}

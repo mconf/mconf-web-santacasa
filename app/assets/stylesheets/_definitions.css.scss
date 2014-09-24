@@ -230,3 +230,25 @@ $mail-font-size: $font-normal;
     }
   }
 }
+
+// Santa Casa
+$santacasa-light-blue: #457fa9;
+$santacasa-dark-blue: #335e7d;
+$santacasa-peach: #d58471;
+$santacasa-dark-peach: #e95f45;
+// overrides
+$navbar-bg-color-dark: $santacasa-dark-blue;
+$navbar-bg-color-light: $santacasa-light-blue;
+$subnav-bg-color: $transparent;
+$navbar-height: 90px;
+$navbar-font-color: #444;
+$navbar-font-color-hover: $link-color-hover;
+$second-color: $santacasa-dark-peach;
+$link-color-hover: $santacasa-dark-peach;
+$link-color-active: darken($link-color-hover, 15);
+$footer-bg-color: #334F61;
+$footer-height: 70px;
+$page-title-color: #334F61;
+$h-font-color: #334F61;
+$h-font-color-alternative: $h-font-color;
+$font-family: Arial;
