@@ -29,7 +29,6 @@ ul#navbar-left-links, #navbar #navbar-right-links {
 
 #footer-wrapper {
   background: image-url('santacasa/bg-footer.jpg') repeat scroll center top transparent;
-  //padding: 0;
 }
 
 #footer-logo {
@@ -37,10 +36,6 @@ ul#navbar-left-links, #navbar #navbar-right-links {
   width: 280px;
   height: 46px;
   background: image-url('santacasa/footer-copyright.png') no-repeat scroll left top transparent;
-}
-
-.simple-footer #footer-logo {
-  background: image-url('santacasa/footer-copyright-inverted.png') no-repeat scroll left top transparent;
 }
 
 #navbar-logo {
@@ -92,15 +87,15 @@ h1, h2, h3, h4 {
 #footer {
   .footer-languages {
     float: left;
-    margin: 20px 0 0 100px;
+    margin: 25px 0 0 100px;
 
     li {
       display: inline;
       margin-left: 10px;
 
       a {
-        $normal: #ddd;
-        $hover: $link-color-hover;
+        $normal: #ccc;
+        $hover: white;
         @include link-colors($normal, $hover, $hover, $normal);
       }
     }
@@ -108,27 +103,52 @@ h1, h2, h3, h4 {
 
   .mconftec {
     float: right;
-    margin: 20px 0 0 0;
+    margin: 15px 10px 0 0;
 
     img {
       width: 32px;
       height: 32px;
+      @include transition(opacity .5s, background .5s);
+      opacity: 0.7;
+      padding: 3px;
+      @include border-radius(4px);
+    }
+
+    img:hover {
+      opacity: 1;
+      background: darken($footer-bg-color, 5);
+    }
+  }
+
+  .mconf {
+    float: right;
+    margin: 15px 10px 0 0;
+
+    img {
+      width: 28px;
+      height: 28px;
+      @include transition(opacity .5s, background .5s);
+      opacity: 0.7;
+      padding: 6px;
+      @include border-radius(4px);
+    }
+
+    img:hover {
+      opacity: 1;
+      background: darken($footer-bg-color, 5);
     }
   }
 }
 
-#footer-wrapper.simple-footer #footer .languages {
-  float: left;
-  margin: 20px 0 0 100px;
-
-  li {
-    display: inline;
-    margin-left: 10px;
+body.errors {
+  #content-wrapper {
+    background: $transparent;
+    border: 0;
   }
-}
 
-body.errors #content-wrapper {
-  background: #eee;
+  #site {
+    background: image-url('santacasa/bg-page.jpg') repeat-x scroll center top transparent;
+  }
 }
 
 body.frontpage.show {
@@ -149,5 +169,4 @@ body.frontpage.show {
       float: right;
     }
   }
-
 }
