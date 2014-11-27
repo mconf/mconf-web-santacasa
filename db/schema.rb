@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20140831235219) do
+ActiveRecord::Schema.define(version: 20141117182436) do
 
   create_table "activities", force: true do |t|
     t.integer  "trackable_id"
@@ -70,9 +70,17 @@ ActiveRecord::Schema.define(version: 20140831235219) do
 
   create_table "bigbluebutton_playback_formats", force: true do |t|
     t.integer  "recording_id"
-    t.string   "format_type"
     t.string   "url"
     t.integer  "length"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.integer  "playback_type_id"
+  end
+
+  create_table "bigbluebutton_playback_types", force: true do |t|
+    t.string   "identifier"
+    t.boolean  "visible",    default: false
+    t.boolean  "default",    default: false
     t.datetime "created_at"
     t.datetime "updated_at"
   end
@@ -185,6 +193,7 @@ ActiveRecord::Schema.define(version: 20140831235219) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.datetime "processed_at"
+    t.string   "secret_token"
   end
 
   create_table "ldap_tokens", force: true do |t|
@@ -384,23 +393,23 @@ ActiveRecord::Schema.define(version: 20140831235219) do
 
   create_table "users", force: true do |t|
     t.string   "username"
-    t.string   "email",                             default: "",    null: false
-    t.string   "encrypted_password",                default: "",    null: false
-    t.string   "password_salt",          limit: 40
+    t.string   "email",                                          default: "",    null: false
+    t.string   "encrypted_password",                             default: "",    null: false
+    t.string   "password_salt",                       limit: 40
     t.datetime "created_at"
     t.datetime "updated_at"
-    t.boolean  "superuser",                         default: false
-    t.boolean  "disabled",                          default: false
+    t.boolean  "superuser",                                      default: false
+    t.boolean  "disabled",                                       default: false
     t.datetime "confirmed_at"
     t.string   "timezone"
-    t.boolean  "expanded_post",                     default: false
-    t.integer  "notification",                      default: 1
+    t.boolean  "expanded_post",                                  default: false
+    t.integer  "notification",                                   default: 1
     t.string   "locale"
-    t.integer  "receive_digest",                    default: 0
+    t.integer  "receive_digest",                                 default: 0
     t.string   "reset_password_token"
     t.datetime "reset_password_sent_at"
     t.datetime "remember_created_at"
-    t.integer  "sign_in_count",                     default: 0
+    t.integer  "sign_in_count",                                  default: 0
     t.datetime "current_sign_in_at"
     t.datetime "last_sign_in_at"
     t.string   "current_sign_in_ip"
@@ -409,7 +418,9 @@ ActiveRecord::Schema.define(version: 20140831235219) do
     t.datetime "confirmation_sent_at"
     t.string   "unconfirmed_email"
     t.boolean  "can_record"
-    t.boolean  "approved",                          default: false, null: false
+    t.boolean  "approved",                                       default: false, null: false
+    t.datetime "needs_approval_notification_sent_at"
+    t.datetime "approved_notification_sent_at"
   end
 
   add_index "users", ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true, using: :btree

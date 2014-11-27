@@ -34,11 +34,6 @@ class SpacesController < ApplicationController
     @space.new_activity params[:action], current_user unless @space.errors.any? || @space.is_cropping?
   end
 
-  # Recent activity for join requests
-  after_filter :only => [:join_request_update] do
-    @space.new_activity :join, current_user unless @join_request.errors.any? || !@join_request.accepted?
-  end
-
   def index
     if params[:view].nil? or params[:view] != "list"
       params[:view] = "thumbnails"
@@ -232,11 +227,10 @@ class SpacesController < ApplicationController
     @webconf_attendees = []
     unless @webconf_room.attendees.nil?
       @webconf_room.attendees.each do |attendee|
-        profile = Profile.where(:full_name => attendee.full_name).first
-        unless profile.nil?
-          @webconf_attendees << profile.user
-        end
+        user = User.where(id: attendee.user_id).first
+        @webconf_attendees << user unless user.nil?
       end
+      @webconf_attendees.uniq!
     end
     render :layout => 'spaces_show'
   end
@@ -309,7 +303,7 @@ class SpacesController < ApplicationController
 
   def handle_record_not_found exception
     @error_message = t("spaces.error.not_found", :permalink => params[:id], :path => spaces_path)
-    render_error 404
+    render_404 exception
   end
 
   # User trying to access a space not owned or joined by him
@@ -340,19 +334,12 @@ class SpacesController < ApplicationController
       if exception.action == :show
         @error_message = t("space.is_private_html", name: @space.name, path: new_space_join_request_path(@space))
       end
-      render_error 403
+      render_403 exception
     end
   end
 
-  def space_params
-    unless params[:space].blank?
-      params[:space].permit(*space_allowed_params)
-    else
-      {}
-    end
-  end
-
-  def space_allowed_params
+  allow_params_for :space
+  def allowed_params
     [ :name, :description, :logo_image, :public, :permalink, :disabled, :repository,
       :crop_x, :crop_y, :crop_w, :crop_h,
       :bigbluebutton_room_attributes =>

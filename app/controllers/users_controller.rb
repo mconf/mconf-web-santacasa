@@ -42,7 +42,7 @@ class UsersController < ApplicationController
 
   def show
     @user_spaces = @user.spaces
-    @recent_activities = @user.all_activity.order('updated_at DESC').page(params[:page])
+    @recent_activities = @user.all_public_activity.order('updated_at DESC').page(params[:page])
     @profile = @user.profile!
     respond_to do |format|
       format.html { render 'profiles/show' }
@@ -64,8 +64,11 @@ class UsersController < ApplicationController
         !params[:user].nil? && params[:user].has_key?(:password) &&
         !params[:user][:password].empty?
     end
-    updated = if password_changed
+    updated = if password_changed and !current_user.superuser?
                 @user.update_with_password(user_params)
+              elsif password_changed and current_user.superuser?
+                params[:user].delete(:current_password) unless params[:user].nil?
+                @user.update_attributes(user_params)
               else
                 params[:user].delete(:current_password) unless params[:user].nil?
                 @user.update_without_password(user_params)
@@ -163,7 +166,7 @@ class UsersController < ApplicationController
   end
 
   def approve
-    if Site.current.require_registration_approval?
+    if current_site.require_registration_approval?
       @user.approve!
       @user.skip_confirmation_notification!
       @user.confirm!
@@ -175,7 +178,7 @@ class UsersController < ApplicationController
   end
 
   def disapprove
-    if Site.current.require_registration_approval?
+    if current_site.require_registration_approval?
       @user.disapprove!
       flash[:notice] = t('users.disapprove.disapproved', :username => @user.username)
     else
@@ -191,14 +194,7 @@ class UsersController < ApplicationController
     authorize! :enable, @user
   end
 
-  def user_params
-    unless params[:user].blank?
-      params[:user].permit(*allowed_params)
-    else
-      {}
-    end
-  end
-
+  allow_params_for :user
   def allowed_params
     allowed = [ :password, :password_confirmation, :remember_me, :current_password,
       :login, :approved, :disabled, :timezone, :can_record, :receive_digest, :notification,

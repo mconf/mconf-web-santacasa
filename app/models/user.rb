@@ -9,6 +9,8 @@ require 'devise/encryptors/station_encryptor'
 require 'digest/sha1'
 class User < ActiveRecord::Base
 
+  # TODO: block :username from being modified after registration
+
   ## Devise setup
   # Other available devise modules are:
   # :token_authenticatable, :lockable, :timeoutable and :omniauthable
@@ -29,20 +31,12 @@ class User < ActiveRecord::Base
     end
   end
 
-  # attr_accessible :email, :password, :password_confirmation, :remember_me, :login, :username, :approved
-  # TODO: block :username from being modified after registration
-  # attr_accessible :username, :as => :create
-
-  # TODO: improve the format matcher, check specs for some values that are allowed today
-  #   but are not really recommended (e.g. '-')
-  validates :username, :uniqueness => { :case_sensitive => false },
-                       :presence => true,
-                       :format => /\A[A-Za-z0-9\-_]*\z/,
-                       :length => { :minimum => 1 }
-
-  # The username has to be unique not only for user, but across other
-  # models as well
-  validate :username_uniqueness
+  validates :username,
+    presence: true,
+    format: /\A[A-Za-z0-9\-_]*\z/,
+    length: { minimum: 1 },
+    identifier_uniqueness: true,
+    room_param_uniqueness: true
 
   extend FriendlyId
   friendly_id :username
@@ -56,18 +50,35 @@ class User < ActiveRecord::Base
     self.new_record?
   end
 
-  # Returns a query with all the activity related to this user: activities in his spaces and
-  # web conference rooms
-  def all_activity
+  # Returns a relation with all the activity related to this user: activities in his spaces
+  # and web conference rooms.
+  # Accepts an array of keys to reject. Keys are the string that identify the recent
+  # activity, e.g. "space.leave".
+  def all_activity(reject_keys=[])
     user_room = self.bigbluebutton_room
     spaces = self.spaces
     space_rooms = spaces.map{ |s| s.bigbluebutton_room.id }
 
     t = RecentActivity.arel_table
     in_spaces = t[:owner_id].in(spaces.map(&:id)).and(t[:owner_type].eq('Space'))
+    in_spaces_as_trackable = t[:trackable_id].in(spaces.map(&:id)).and(t[:trackable_type].eq('Space'))
     in_room = t[:owner_id].in(user_room.id).and(t[:owner_type].eq('BigbluebuttonRoom'))
     in_space_rooms = t[:owner_id].in(space_rooms).and(t[:owner_type].eq('BigbluebuttonRoom'))
-    RecentActivity.where(in_spaces.or(in_room).or(in_space_rooms))
+
+    activities = RecentActivity.where(in_spaces.or(in_spaces_as_trackable).or(in_room).or(in_space_rooms))
+    for key in reject_keys
+      activities = activities.where("activities.key != ?", key)
+    end
+    activities
+  end
+
+  # All activities that are public and should be visible for this user
+  def all_public_activity
+    all_activity(["space.decline"])
+  end
+
+  def site_needs_approval?
+    Site.current.require_registration_approval
   end
 
   apply_simple_captcha
@@ -87,21 +98,9 @@ class User < ActiveRecord::Base
 
   accepts_nested_attributes_for :bigbluebutton_room
 
-  # TODO: see JoinRequestsController#create L50
-  # attr_accessible :created_at, :updated_at, :activated_at, :disabled
-  # attr_accessible :captcha, :captcha_key, :authenticate_with_captcha
-  # attr_accessible :email2, :email3
-  # attr_accessible :timezone
-  # attr_accessible :expanded_post
-  # attr_accessible :notification
-  # attr_accessible :superuser
-  # attr_accessible :can_record
-  # attr_accessible :receive_digest
-
   # Full name must go to the profile, but it is provided by the user when
   # signing up so we have to cache it until the profile is created
   attr_accessor :_full_name
-  # attr_accessible :_full_name
 
   # BigbluebuttonRoom requires an identifier with 3 chars generated from :name
   # So we'll require :_full_name and :username to have length >= 3
@@ -115,7 +114,7 @@ class User < ActiveRecord::Base
   after_create :create_webconf_room
   after_update :update_webconf_room
 
-  before_create :automatically_approve_if_needed
+  before_create :automatically_approve, unless: :site_needs_approval?
 
   default_scope { where(:disabled => false) }
 
@@ -152,9 +151,7 @@ class User < ActiveRecord::Base
 
   def update_webconf_room
     if self.username_changed?
-      params = {
-        :param => self.username
-      }
+      params = { param: self.username }
       bigbluebutton_room.update_attributes(params)
     end
   end
@@ -166,28 +163,11 @@ class User < ActiveRecord::Base
 
   # Full location: city + country
   def location
-    if !self.city.blank? && !self.country.blank?
-      [ self.city, self.country ].join(', ')
-    elsif !self.city.blank?
-      self.city
-    elsif !self.country.blank?
-      self.country
-    else
-      ""
-    end
+    [ self.city.presence, self.country.presence ].compact.join(', ')
   end
 
   after_create do |user|
     user.create_profile :full_name => user._full_name
-
-    # Checking if we have to join a space and/or event
-    invites = JoinRequest.where :email => user.email
-    invites.each do |invite|
-      if invite.space?
-        space.add_member!(user)
-      end
-    end
-
   end
 
   # Builds a guest user based on the e-mail
@@ -207,10 +187,6 @@ class User < ActiveRecord::Base
 
   def other_public_spaces
     Space.public_spaces.order('name') - spaces
-  end
-
-  def user_count
-    users.size
   end
 
   def disable
@@ -282,8 +258,10 @@ class User < ActiveRecord::Base
 
   # Automatically approves the user if the current site is not requiring approval
   # on registration.
-  def automatically_approve_if_needed
-    self.approved = true unless Site.current.require_registration_approval?
+  def automatically_approve
+    self.approved = true
+    self.needs_approval_notification_sent_at = Time.now
+    self.approved_notification_sent_at = Time.now
   end
 
   # Sets the user as approved
@@ -334,14 +312,6 @@ class User < ActiveRecord::Base
     # note: not 'find' because some of the spaces might be disabled and 'find' would raise
     #   an exception
     Space.where(:id => ids)
-  end
-
-  private
-
-  def username_uniqueness
-    unless Space.with_disabled.find_by_permalink(self.username).blank?
-      errors.add(:username, "has already been taken")
-    end
   end
 
 end

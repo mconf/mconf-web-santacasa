@@ -39,7 +39,8 @@ Mconf::Application.routes.draw do
   bigbluebutton_routes :default, :controllers => {
     :servers => 'custom_bigbluebutton_servers',
     :rooms => 'custom_bigbluebutton_rooms',
-    :recordings => 'custom_bigbluebutton_recordings'
+    :recordings => 'custom_bigbluebutton_recordings',
+    :playback_types => 'custom_bigbluebutton_playback_types'
   }
   # register a few custom routes that were added to bigbluebutton_rails
   get '/bigbluebutton/rooms/:id/join_options',
@@ -51,6 +52,9 @@ Mconf::Application.routes.draw do
   post '/bigbluebutton/rooms/:id/send_invitation',
     :to => 'custom_bigbluebutton_rooms#send_invitation',
     :as => "send_invitation_bigbluebutton_room"
+  get '/bigbluebutton/playback_types',
+    :to => 'custom_bigbluebutton_playback_types#index',
+    :as => "bigbluebutton_playback_types"
   # shortcut route to join webconference rooms
   get '/webconf/:id',
     :to => 'custom_bigbluebutton_rooms#invite_userid',
@@ -58,13 +62,15 @@ Mconf::Application.routes.draw do
 
   # event module
   if Mconf::Modules.mod_loaded?('events')
+    mount MwebEvents::Engine => '/'
+
     # For invitations
     resources :events, :only =>[] do
-      post :send_invitation, :controller => 'mweb_events/events'
-      get  :invite, :controller => 'mweb_events/events'
+      member do
+        post :send_invitation, :controller => 'mweb_events/events'
+        get  :invite, :controller => 'mweb_events/events'
+      end
     end
-
-    mount MwebEvents::Engine => '/'
   end
 
   # shibboleth controller
@@ -102,9 +108,14 @@ Mconf::Application.routes.draw do
 
     resources :news
 
-    resources :join_requests do
+    resources :join_requests, only: [:index, :show, :new, :create] do
       collection do
         get :invite
+      end
+
+      member do
+        post :accept
+        post :decline
       end
     end
 
@@ -147,6 +158,7 @@ Mconf::Application.routes.draw do
   get '/room/edit', :to => 'my#edit_room', :as => 'edit_my_room'
   get '/recordings', :to => 'my#recordings', :as => 'my_recordings'
   get '/recordings/:id/edit', :to => 'my#edit_recording', :as => 'edit_my_recording'
+  get '/pending', :to => 'my#approval_pending', :as => 'my_approval_pending'
 
   resources :messages, :controller => :private_messages, :except => [:edit]
 
@@ -168,10 +180,6 @@ Mconf::Application.routes.draw do
   # General statistics for the website
   get '/statistics', :to => 'statistics#show', :as => 'show_statistics'
 
-  # 'Hack' to show a custom 404 page.
-  # See more at http://blog.igodigital.com/blog/notes-on-cyber-weekend-targeted-email-campaigns/custom-error-handling-in-rails-303
-  # and http://ramblinglabs.com/blog/2012/01/rails-3-1-adding-custom-404-and-500-error-pages
-  unless Rails.application.config.consider_all_requests_local
-    get '*not_found', :to => 'errors#error_404'
-  end
+  # To treat errors on pages that don't fall on any other controller
+  match ':status', to: 'errors#render_error', constraints: { status: /\d{3}/ }, via: :all
 end

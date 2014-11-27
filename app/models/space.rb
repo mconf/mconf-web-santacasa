@@ -49,14 +49,12 @@ class Space < ActiveRecord::Base
   # 'permalink', so we require it to have have length >= 3
   # TODO: improve the format matcher, check specs for some values that are allowed today
   #   but are not really recommended (e.g. '---')
-  validates :permalink, :uniqueness => { :case_sensitive => false },
-                        :format => /\A[A-Za-z0-9\-_]*\z/,
-                        :presence => true,
-                        :length => { :minimum => 3 }
-
-  # The permalink has to be unique not only for spaces, but across other
-  # models as well
-  validate :permalink_uniqueness
+  validates :permalink,
+    presence: true,
+    format: /\A[A-Za-z0-9\-_]*\z/,
+    length: { minimum: 3 },
+    identifier_uniqueness: true,
+    room_param_uniqueness: true
 
   # the friendly name / slug for the space
   extend FriendlyId
@@ -104,7 +102,7 @@ class Space < ActiveRecord::Base
 
   def new_activity key, user, join_request=nil
     if join_request
-      create_activity key, :owner => self, :parameters => { :user_id => user.id, :username => user.name, :join_request_id => join_request.id }
+      create_activity key, :owner => join_request, :parameters => { :user_id => user.id, :username => user.name }
     else
       create_activity key, :owner => self, :parameters => { :user_id => user.id, :username => user.name }
     end
@@ -141,11 +139,11 @@ class Space < ActiveRecord::Base
   end
 
   def pending_join_requests
-    join_requests.where(:processed_at => nil, :request_type => 'request')
+    join_requests.where(:processed_at => nil, :request_type => JoinRequest::TYPES[:request])
   end
 
   def pending_invitations
-    join_requests.where(:processed_at => nil, :request_type => 'invite')
+    join_requests.where(:processed_at => nil, :request_type => JoinRequest::TYPES[:invite])
   end
 
   def pending_join_request_or_invitation_for(user)
@@ -178,12 +176,6 @@ class Space < ActiveRecord::Base
   end
 
   private
-
-  def permalink_uniqueness
-    unless User.with_disabled.find_by_username(self.permalink).blank?
-      errors.add(:permalink, "has already been taken")
-    end
-  end
 
   # Creates the webconf room after the space is created
   def create_webconf_room

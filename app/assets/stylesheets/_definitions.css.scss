@@ -231,6 +231,12 @@ $mail-font-size: $font-normal;
   }
 }
 
+@mixin small-date {
+  color: #666;
+  font-weight: normal;
+  @include font-size($font-small);
+}
+
 // Santa Casa
 $santacasa-light-blue: #457fa9;
 $santacasa-dark-blue: #335e7d;

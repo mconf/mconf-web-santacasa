@@ -62,7 +62,7 @@ describe SpaceMailer do
   end
 
   describe ".processed_invitation_email" do
-    let(:join_request) { FactoryGirl.create(:space_join_request) }
+    let(:join_request) { FactoryGirl.create(:space_join_request, :request_type => 'invite') }
     let(:mail) { SpaceMailer.processed_invitation_email(join_request.id) }
     let(:introducer) { join_request.introducer }
     let(:space) { join_request.group }
@@ -180,7 +180,7 @@ describe SpaceMailer do
       it("sets 'reply_to'") { mail.reply_to.should eql([candidate.email]) }
       it("assigns @join_request") { mail.body.encoded.should match(join_request.comment) }
       it("renders the link to accept the join request") {
-        url = space_join_requests_url(space, join_request, :host => Site.current.domain)
+        url = space_join_requests_url(space, host: Site.current.domain)
         content = I18n.t('space_mailer.join_request_email.message.link', :url => url).html_safe
         mail.body.encoded.should match(Regexp.escape(content))
       }
@@ -257,6 +257,9 @@ describe SpaceMailer do
                          :space_url => url)
         mail.body.encoded.should match(content)
       }
+      it("sends email to the join requests's introducer") {
+        mail.to.should include(join_request.introducer.email)
+      }
     end
 
     context "uses the candidate's locale" do
@@ -288,4 +291,14 @@ describe SpaceMailer do
     end
   end
 
+  context "calls the error handler on exceptions" do
+    let(:exception) { Exception.new("test exception") }
+    it {
+      with_resque do
+        BaseMailer.any_instance.stub(:render) { raise exception }
+        Mconf::MailerErrorHandler.should_receive(:handle).with(SpaceMailer, nil, exception, "invitation_email", anything)
+        SpaceMailer.invitation_email(join_request.id).deliver
+      end
+    }
+  end
 end
