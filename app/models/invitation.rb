@@ -25,21 +25,8 @@ class Invitation < ActiveRecord::Base
              end
     return false if mailer.nil?
 
-    # note: for emails, for now, we always assume it succeeded
-    result = true
-
-    if self.recipient.nil?
-      mailer.invitation_email(self.id).deliver
-    else
-      if self.recipient.notify_via_email?
-        mailer.invitation_email(self.id).deliver
-      end
-      if self.recipient.notify_via_private_message?
-        result = send_private_message
-      end
-    end
-
-    result
+    mailer.invitation_email(self.id).deliver
+    true
   end
 
   def self.create_invitations(user_list, params)
@@ -97,7 +84,9 @@ class Invitation < ActiveRecord::Base
 
   def to_ical
     if self.is_a? EventInvitation
-      target.to_ics.to_ical
+      cal = Icalendar::Calendar.new
+      cal.add_event(target.to_ics)
+      cal.to_ical
     else
       event = Icalendar::Event.new
 
