@@ -1,5 +1,5 @@
 # This file is part of Mconf-Web, a web application that provides access
-# to the Mconf webconferencing system. Copyright (C) 2010-2012 Mconf
+# to the Mconf webconferencing system. Copyright (C) 2010-2015 Mconf.
 #
 # This file is licensed under the Affero General Public License version
 # 3 or later. See the LICENSE file.
@@ -73,6 +73,25 @@ describe ApplicationController do
           it { assigns(:result).should eql(:moderator) }
         end
 
+        context "and the user is not the owner but is a superuser" do
+          before {
+            controller.stub(:current_user).and_return(FactoryGirl.create(:superuser))
+            BigbluebuttonRoom.any_instance.stub(:is_running?).and_return(true)
+          }
+          before(:each) { get :index, :room_id => room.id }
+          it { assigns(:result).should eql(:moderator) }
+        end
+
+        context "and the user is not the owner but is a superuser and the room is not running" do
+          before {
+            controller.stub(:current_user).and_return(FactoryGirl.create(:superuser))
+            BigbluebuttonRoom.any_instance.stub(:is_running?).and_return(false)
+          }
+
+          before(:each) { get :index, :room_id => room.id }
+          it { assigns(:result).should eql(:moderator) }
+        end
+
         context "and the user is not the owner" do
           before { controller.stub(:current_user).and_return(FactoryGirl.create(:user)) }
           before(:each) { get :index, :room_id => room.id }
@@ -92,6 +111,25 @@ describe ApplicationController do
 
         context "and the user is the owner" do
           before { controller.stub(:current_user).and_return(user) }
+          before(:each) { get :index, :room_id => room.id }
+          it { assigns(:result).should eql(:moderator) }
+        end
+
+        context "and the user is not the owner but is a superuser" do
+          before {
+            controller.stub(:current_user).and_return(FactoryGirl.create(:superuser))
+            BigbluebuttonRoom.any_instance.stub(:is_running?).and_return(true)
+          }
+          before(:each) { get :index, :room_id => room.id }
+          it { assigns(:result).should eql(:moderator) }
+        end
+
+        context "and the user is not the owner but is a superuser and the room is not running" do
+          before {
+            controller.stub(:current_user).and_return(FactoryGirl.create(:superuser))
+            BigbluebuttonRoom.any_instance.stub(:is_running?).and_return(false)
+          }
+
           before(:each) { get :index, :room_id => room.id }
           it { assigns(:result).should eql(:moderator) }
         end
@@ -199,6 +237,25 @@ describe ApplicationController do
           end
         end
 
+        context "and the user is not a member of the space but is a superuser" do
+          before {
+            controller.stub(:current_user).and_return(FactoryGirl.create(:superuser))
+            BigbluebuttonRoom.any_instance.stub(:is_running?).and_return(true)
+          }
+          before(:each) { get :index, :room_id => room.id }
+          it { assigns(:result).should eql(:moderator) }
+        end
+
+        context "and the user is not a member of the space but is a superuser and the room is not running" do
+          before {
+            controller.stub(:current_user).and_return(FactoryGirl.create(:superuser))
+            BigbluebuttonRoom.any_instance.stub(:is_running?).and_return(false)
+          }
+
+          before(:each) { get :index, :room_id => room.id }
+          it { assigns(:result).should eql(:moderator) }
+        end
+
         context "and the user is not a member of the space" do
           before { controller.stub(:current_user).and_return(user) }
           before(:each) { get :index, :room_id => room.id }
@@ -257,6 +314,25 @@ describe ApplicationController do
               it { assigns(:result).should eql(:moderator) }
             end
           end
+        end
+
+        context "and the user is not a member of the space but is a superuser" do
+          before {
+            controller.stub(:current_user).and_return(FactoryGirl.create(:superuser))
+            BigbluebuttonRoom.any_instance.stub(:is_running?).and_return(true)
+          }
+          before(:each) { get :index, :room_id => room.id }
+          it { assigns(:result).should eql(:moderator) }
+        end
+
+        context "and the user is not a member of the space but is a superuser and the room is not running" do
+          before {
+            controller.stub(:current_user).and_return(FactoryGirl.create(:superuser))
+            BigbluebuttonRoom.any_instance.stub(:is_running?).and_return(false)
+          }
+
+          before(:each) { get :index, :room_id => room.id }
+          it { assigns(:result).should eql(:moderator) }
         end
 
         context "and the user is not a member of the space" do
@@ -540,13 +616,55 @@ describe ApplicationController do
           end
         end
 
-        before(:each) { get :index }
+        context "for an html request" do
+          context "when there's a user signed in" do
+            before {
+              sign_in FactoryGirl.create(:user)
+              get :index
+            }
 
-        it { should respond_with(403) }
-        it { should render_template("errors/error_403") }
-        it { assigns(:exception).should be_an_instance_of(CanCan::AccessDenied) }
-        it { assigns(:exception).message.should eql("Anything") }
-        it { expect(ExceptionNotifier).not_to have_received(:notify_exception) }
+            it { should respond_with(403) }
+            it { should render_template("errors/error_403") }
+            it { assigns(:exception).should be_an_instance_of(CanCan::AccessDenied) }
+            it { assigns(:exception).message.should eql("Anything") }
+            it { expect(ExceptionNotifier).not_to have_received(:notify_exception) }
+          end
+
+          context "when there's no user signed in" do
+            before { get :index }
+
+            it { should respond_with(302) }
+            it { should redirect_to(login_path) }
+            it { expect(ExceptionNotifier).not_to have_received(:notify_exception) }
+          end
+        end
+
+        context "for a json request" do
+          before {
+            sign_in FactoryGirl.create(:user)
+            get :index, format: :json
+          }
+
+          it { should respond_with(:unauthorized) }
+          it {
+            json = { error: true, message: "You need to sign in or sign up before continuing." }.to_json
+            response.body.should eql(json.to_s)
+          }
+        end
+
+        context "for a js request" do
+          before {
+            sign_in FactoryGirl.create(:user)
+            get :index, format: :js
+          }
+
+          it { should respond_with(:unauthorized) }
+          it {
+            json = { error: true, message: "You need to sign in or sign up before continuing." }.to_json
+            response.body.should eql(json.to_s)
+          }
+        end
+
       end
     end
 

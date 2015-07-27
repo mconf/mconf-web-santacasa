@@ -1,5 +1,5 @@
 # This file is part of Mconf-Web, a web application that provides access
-# to the Mconf webconferencing system. Copyright (C) 2010-2012 Mconf
+# to the Mconf webconferencing system. Copyright (C) 2010-2015 Mconf.
 #
 # This file is licensed under the Affero General Public License version
 # 3 or later. See the LICENSE file.
@@ -113,8 +113,9 @@ module Mconf
     # Creates a new user using the information stored in the session.
     # Returns the User created after calling `save`. This might have errors if the call to
     # `save` failed.
+    # The shib_token parameter is used as the Owner of the RecentActivity.
     # Expects that at least the email and name will be set in the session!
-    def create_user
+    def create_user(shib_token)
       password = SecureRandom.hex(16)
       login = get_login
       login = login.parameterize unless login.nil?
@@ -126,9 +127,13 @@ module Mconf
 
       user = User.new params
       user.skip_confirmation!
+      if user.save
+        create_notification(user, shib_token)
+      else
+        Rails.logger.error "Shibboleth: error while saving the user model"
+        Rails.logger.error "Shibboleth: errors: " + user.errors.full_messages.join(", ")
+      end
 
-      user.save
-      send_notification(user)
       user
     end
 
@@ -150,11 +155,10 @@ module Mconf
       ShibToken.create!(:identifier => id)
     end
 
-    # Sending a notification email to a user that just registered.
-    def send_notification(user)
-      if user.present? && user.errors.blank?
-        UserMailer.registration_notification_email(user.id).deliver
-      end
+    def create_notification(user, token)
+      RecentActivity.create(
+        key: 'shibboleth.user.created', owner: token, trackable: user, notified: false
+      )
     end
 
   end

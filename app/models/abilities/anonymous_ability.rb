@@ -1,3 +1,9 @@
+# This file is part of Mconf-Web, a web application that provides access
+# to the Mconf webconferencing system. Copyright (C) 2010-2015 Mconf.
+#
+# This file is licensed under the Affero General Public License version
+# 3 or later. See the LICENSE file.
+
 module Abilities
 
   class AnonymousAbility < BaseAbility
@@ -16,20 +22,22 @@ module Abilities
         end
       end
 
-      can [:read, :current], User, :disabled => false
-      can [:read, :webconference, :recordings], Space, :public => true
+      can [:read, :current], User, disabled: false
+      can [:read, :webconference, :recordings], Space, public: true
       can :select, Space
-      can :read, Post, :space => { :public => true }
-      can :show, News, :space => { :public => true }
-      can :read, Attachment, :space => { :public => true, :repository => true }
+      can :read, Post, space: { public: true }
+      can :show, News, space: { public: true }
+      can :read, Attachment, space: { public: true, repository: true }
 
       # for MwebEvents
       if Mconf::Modules.mod_loaded?('events')
         can [:read, :select], MwebEvents::Event
         # Pertraining public and private event registration
-        can :register, MwebEvents::Event, :public => true
+        can :register, MwebEvents::Event, public: true
         can :create, MwebEvents::Participant # TODO: really needed?
       end
+
+      restrict_access_to_disabled_resources
     end
 
     private

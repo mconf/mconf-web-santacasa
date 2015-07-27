@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # This file is part of Mconf-Web, a web application that provides access
-# to the Mconf webconferencing system. Copyright (C) 2010-2012 Mconf
+# to the Mconf webconferencing system. Copyright (C) 2010-2015 Mconf.
 #
 # This file is licensed under the Affero General Public License version
 # 3 or later. See the LICENSE file.
@@ -26,27 +26,29 @@ class SpacesController < ApplicationController
   respond_to :json, :only => [:update_logo]
   respond_to :html, :only => [:new, :edit, :index, :show]
 
-  rescue_from CanCan::AccessDenied, :with => :handle_access_denied
   rescue_from ActiveRecord::RecordNotFound, :with => :handle_record_not_found
 
   # Create recent activity
-  after_filter :only => [:create, :update, :leave] do
-    @space.new_activity params[:action], current_user unless @space.errors.any? || @space.is_cropping?
+  after_filter :only => [:create, :update, :update_logo, :leave] do
+    @space.new_activity(params[:action], current_user) unless @space.errors.any?
   end
 
   def index
-    if params[:view].nil? or params[:view] != "list"
-      params[:view] = "thumbnails"
-    end
-    spaces = Space.order('name ASC')
-    @spaces = spaces.paginate(:page => params[:page], :per_page => 18)
+    params[:view] = 'thumbnails' if params[:view].nil? || params[:view] != 'list'
+    params[:order] = 'relevance' if params[:order].nil? || params[:order] != 'abc'
 
+    spaces = Space.all
     @user_spaces = user_signed_in? ? current_user.spaces : Space.none
-    @user_spaces = @user_spaces.paginate(:page => params[:page], :per_page => 18)
 
-    if @space
-       session[:current_tab] = "Spaces"
+    @spaces = params[:my_spaces] ? @user_spaces : spaces
+    if params[:order] == 'abc'
+      @spaces = @spaces.order('name ASC').paginate(:page => params[:page], :per_page => 18)
+    else
+      @spaces = @spaces.order_by_activity.paginate(:page => params[:page], :per_page => 18)
     end
+
+    session[:current_tab] = "Spaces" if @space
+
     if params[:manage]
       session[:current_tab] = "Manage"
       session[:current_sub_tab] = "Spaces"
@@ -296,10 +298,15 @@ class SpacesController < ApplicationController
     render_404 exception
   end
 
-  # User trying to access a space not owned or joined by him
+  # Custom handler for access denied errors, overrides method on ApplicationController.
   def handle_access_denied exception
+
+    # anonymous users are required to sign in
+    if !user_signed_in?
+      redirect_to login_path
+
     # if it's a logged user that tried to access a private space
-    if user_signed_in? and [:show, :edit].include?(exception.action)
+    elsif [:show, :edit].include?(exception.action)
 
       if @space.pending_join_request_for?(current_user)
         # redirect him to the page to ask permission to join, but with a warning that
@@ -318,8 +325,8 @@ class SpacesController < ApplicationController
         redirect_to new_space_join_request_path :space_id => params[:id]
       end
 
+    # destructive actions are redirected to the 403 error
     else
-      # anonymous users or destructive actions are redirected to the 403 error
       flash[:error] = t("space.access_forbidden")
       if exception.action == :show
         @error_message = t("space.is_private_html", name: @space.name, path: new_space_join_request_path(@space))
@@ -333,7 +340,7 @@ class SpacesController < ApplicationController
     [ :name, :description, :logo_image, :public, :permalink, :disabled, :repository,
       :crop_x, :crop_y, :crop_w, :crop_h, :crop_img_w, :crop_img_h,
       :bigbluebutton_room_attributes =>
-        [ :id, :attendee_key, :moderator_key, :default_layout,
+        [ :id, :attendee_key, :moderator_key, :default_layout, :private,
           :welcome_msg, :presenter_share_only, :auto_start_video, :auto_start_audio ] ]
   end
 end

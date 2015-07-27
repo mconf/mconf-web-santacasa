@@ -1,5 +1,5 @@
 # This file is part of Mconf-Web, a web application that provides access
-# to the Mconf webconferencing system. Copyright (C) 2010-2012 Mconf
+# to the Mconf webconferencing system. Copyright (C) 2010-2015 Mconf.
 #
 # This file is licensed under the Affero General Public License version
 # 3 or later. See the LICENSE file.
@@ -125,6 +125,11 @@ describe Profile do
           it { should be_able_to(:update_logo, target) }
         end
       end
+
+      context "if the target user is disabled" do
+        before { target.user.disable }
+        it { should_not be_able_to_do_anything_to(target) }
+      end
     end
 
     context "when is a superuser" do
@@ -132,19 +137,34 @@ describe Profile do
       context "regardless of the profile's visibility" do
         Profile::VISIBILITY.each do |visibility|
           before { target.visibility = Profile::VISIBILITY.index(visibility) }
-          it { should be_able_to(:manage, target) }
+          it { should be_able_to_do_everything_to(target) }
         end
+      end
+
+      context "if the target user is disabled" do
+        before { target.user.disable }
+        it { should be_able_to_do_everything_to(target) }
       end
     end
 
     context "when is an anonymous user" do
       let(:user) { User.new }
       it_should_behave_like "a profile's ability", [:everybody]
+
+      context "if the target user is disabled" do
+        before { target.user.disable }
+        it { should_not be_able_to_do_anything_to(target) }
+      end
     end
 
     context "when is a website member (but not a fellow)" do
       let(:user) { FactoryGirl.create(:user) }
       it_should_behave_like "a profile's ability", [:everybody, :members]
+
+      context "if the target user is disabled" do
+        before { target.user.disable }
+        it { should_not be_able_to_do_anything_to(target) }
+      end
     end
 
     context "when is a public fellow user" do
@@ -156,6 +176,11 @@ describe Profile do
       }
       it_should_behave_like "a profile's ability",
         [:everybody, :members, :public_fellows]
+
+      context "if the target user is disabled" do
+        before { target.user.disable }
+        it { should_not be_able_to_do_anything_to(target) }
+      end
     end
 
     context "when is a private fellow user" do
@@ -167,6 +192,11 @@ describe Profile do
       }
       it_should_behave_like "a profile's ability",
         [:everybody, :members, :public_fellows, :private_fellows]
+
+      context "if the target user is disabled" do
+        before { target.user.disable }
+        it { should_not be_able_to_do_anything_to(target) }
+      end
     end
   end
 
